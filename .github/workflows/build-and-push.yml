@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "Dockerfile"
-      - ".github/workflows/build-and-push.yml"
+      - ".github/workflows/**"
   schedule:
     # Rebuild weekly on Sundays to get latest packages
     - cron: "17 0 * * 0"
