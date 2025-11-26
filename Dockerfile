@@ -1,4 +1,8 @@
-FROM debian:stable-slim
+# Pinned versions for reproducibility
+# Debian: https://hub.docker.com/_/debian (bookworm = Debian 12)
+# Node.js LTS: https://nodejs.org (v24.x = current LTS)
+# Docker CLI: Latest stable from official Docker repository
+FROM debian:bookworm-20241111-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV AGENT_TOOLSDIRECTORY=/opt/hostedtoolcache
@@ -41,9 +45,9 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
   apt-get install -y docker-ce-cli docker-buildx-plugin docker-compose-plugin && \
   echo "Docker CLI installed: $(docker --version)"
 
-# Install Node.js LTS
+# Install Node.js LTS (pinned version)
 RUN mkdir -p "$AGENT_TOOLSDIRECTORY/node" && \
-  NODE_VERSION=$(curl -s https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)][0].version') && \
+  NODE_VERSION="v24.11.1" && \
   echo "Installing Node.js $NODE_VERSION" && \
   NODEPATH="$AGENT_TOOLSDIRECTORY/node/${NODE_VERSION:1}/x64" && \
   mkdir -p "$NODEPATH" && \
