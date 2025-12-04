@@ -28,6 +28,8 @@ RUN apt-get update && \
   gnupg \
   lsb-release \
   xz-utils \
+  zsh \
+  shfmt \
   && \
   # Configure SSH for GitHub
   mkdir -p /etc/ssh && \
@@ -75,6 +77,8 @@ RUN echo "=== Installation Verification ===" && \
   echo "npm: $(npm --version)" && \
   echo "Docker CLI: $(docker --version)" && \
   echo "Git: $(git --version)" && \
-  echo "jq: $(jq --version)"
+  echo "jq: $(jq --version)" && \
+  echo "zsh: $(zsh --version)" && \
+  echo "shfmt: $(shfmt --version)"
 
 WORKDIR /workspace
