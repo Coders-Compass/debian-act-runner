@@ -30,6 +30,7 @@ RUN apt-get update && \
   xz-utils \
   zsh \
   shfmt \
+  shellcheck \
   && \
   # Configure SSH for GitHub
   mkdir -p /etc/ssh && \
@@ -79,6 +80,7 @@ RUN echo "=== Installation Verification ===" && \
   echo "Git: $(git --version)" && \
   echo "jq: $(jq --version)" && \
   echo "zsh: $(zsh --version)" && \
-  echo "shfmt: $(shfmt --version)"
+  echo "shfmt: $(shfmt --version)" && \
+  echo "shellcheck: $(shellcheck --version | head -2)"
 
 WORKDIR /workspace
