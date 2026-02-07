@@ -2,7 +2,7 @@
 # Debian: https://hub.docker.com/_/debian (bookworm = Debian 12)
 # Node.js LTS: https://nodejs.org (v24.x = current LTS)
 # Docker CLI: Latest stable from official Docker repository
-FROM debian:bookworm-20260112-slim
+FROM debian:bookworm-20260202-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV AGENT_TOOLSDIRECTORY=/opt/hostedtoolcache
