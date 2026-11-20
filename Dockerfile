@@ -105,13 +105,17 @@ RUN set -euo pipefail && \
   rm -f actionlint actionlint.tar.gz shfmt golangci-lint golangci-lint.tar.gz
 
 # Install Node.js into the tool cache, where actions/setup-node finds it by the x64.complete marker
-# The first version is `current` on PATH; the rest are the versions the Forgejo repos pin in .node-version.
-# Bump by hand from https://nodejs.org/dist/index.json; Dependabot does not track these.
-ARG NODE_VERSIONS="24.11.1 26.13.1 24.22.3 22.23.5"
+# Each major resolves to its newest release in index.json; the first major is `current` on PATH.
+# ADD re-fetches index.json on every build, so a new Node release busts this layer and the weekly rebuild ships it.
+ARG NODE_MAJORS="24 26 22"
+ADD https://nodejs.org/dist/index.json /tmp/node-index.json
 RUN set -euo pipefail && \
   case "$(dpkg --print-architecture)" in amd64) NODE_ARCH=x64 ;; arm64) NODE_ARCH=arm64 ;; *) echo "Unsupported architecture" && exit 1 ;; esac && \
   cd /tmp; \
-  for v in $NODE_VERSIONS; do \
+  for major in $NODE_MAJORS; do \
+    v="$(jq -r --arg m "v$major." --arg f "linux-$NODE_ARCH" 'first(.[] | select((.version | startswith($m)) and any(.files[]; . == $f))) | .version | ltrimstr("v")' node-index.json)"; \
+    [ -n "$v" ] || { echo "No Node.js release for major $major"; exit 1; }; \
+    [ -n "${CURRENT:-}" ] || CURRENT="$v"; \
     echo "Installing Node.js v$v ($NODE_ARCH)"; \
     tarball="node-v$v-linux-$NODE_ARCH.tar.xz"; \
     curl -fsSLO "https://nodejs.org/dist/v$v/$tarball"; \
@@ -121,7 +125,7 @@ RUN set -euo pipefail && \
     touch "$AGENT_TOOLSDIRECTORY/node/$v/$NODE_ARCH.complete"; \
     rm "$tarball"; \
   done; \
-  NODEPATH="$AGENT_TOOLSDIRECTORY/node/${NODE_VERSIONS%% *}/$NODE_ARCH" && \
+  NODEPATH="$AGENT_TOOLSDIRECTORY/node/$CURRENT/$NODE_ARCH" && \
   # Create 'current' symlink for easier PATH management
   ln -s "$NODEPATH" "$AGENT_TOOLSDIRECTORY/node/current" && \
   # Also create traditional symlinks
