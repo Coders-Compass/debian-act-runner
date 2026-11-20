@@ -90,7 +90,7 @@ RUN set -euo pipefail && \
     arm64) AL_SHA="$ACTIONLINT_SHA256_ARM64" SF_SHA="$SHFMT_SHA256_ARM64" GL_SHA="$GOLANGCI_LINT_SHA256_ARM64" ;; \
     *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
   esac && \
-  cd /tmp && \
+  cd /tmp; \
   curl -fsSLo actionlint.tar.gz "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_${ARCH}.tar.gz" && \
   echo "${AL_SHA}  actionlint.tar.gz" | sha256sum -c - && \
   tar -xzf actionlint.tar.gz actionlint && \
@@ -104,16 +104,24 @@ RUN set -euo pipefail && \
   install -m 0755 golangci-lint /usr/local/bin/golangci-lint && \
   rm -f actionlint actionlint.tar.gz shfmt golangci-lint golangci-lint.tar.gz
 
-# Install Node.js LTS (pinned version)
-RUN mkdir -p "$AGENT_TOOLSDIRECTORY/node" && \
-  NODE_VERSION="v24.11.1" && \
+# Install Node.js into the tool cache, where actions/setup-node finds it by the x64.complete marker
+# The first version is `current` on PATH; the rest are the versions the Forgejo repos pin in .node-version.
+# Bump by hand from https://nodejs.org/dist/index.json; Dependabot does not track these.
+ARG NODE_VERSIONS="24.11.1 26.13.1 24.22.3 22.23.5"
+RUN set -euo pipefail && \
   case "$(dpkg --print-architecture)" in amd64) NODE_ARCH=x64 ;; arm64) NODE_ARCH=arm64 ;; *) echo "Unsupported architecture" && exit 1 ;; esac && \
-  echo "Installing Node.js $NODE_VERSION ($NODE_ARCH)" && \
-  NODEPATH="$AGENT_TOOLSDIRECTORY/node/${NODE_VERSION:1}/$NODE_ARCH" && \
-  mkdir -p "$NODEPATH" && \
-  wget -q "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-$NODE_ARCH.tar.xz" && \
-  tar -Jxf "node-$NODE_VERSION-linux-$NODE_ARCH.tar.xz" --strip-components=1 -C "$NODEPATH" && \
-  rm "node-$NODE_VERSION-linux-$NODE_ARCH.tar.xz" && \
+  cd /tmp; \
+  for v in $NODE_VERSIONS; do \
+    echo "Installing Node.js v$v ($NODE_ARCH)"; \
+    tarball="node-v$v-linux-$NODE_ARCH.tar.xz"; \
+    curl -fsSLO "https://nodejs.org/dist/v$v/$tarball"; \
+    curl -fsSL "https://nodejs.org/dist/v$v/SHASUMS256.txt" | grep " $tarball\$" | sha256sum -c -; \
+    mkdir -p "$AGENT_TOOLSDIRECTORY/node/$v/$NODE_ARCH"; \
+    tar -Jxf "$tarball" --strip-components=1 -C "$AGENT_TOOLSDIRECTORY/node/$v/$NODE_ARCH"; \
+    touch "$AGENT_TOOLSDIRECTORY/node/$v/$NODE_ARCH.complete"; \
+    rm "$tarball"; \
+  done; \
+  NODEPATH="$AGENT_TOOLSDIRECTORY/node/${NODE_VERSIONS%% *}/$NODE_ARCH" && \
   # Create 'current' symlink for easier PATH management
   ln -s "$NODEPATH" "$AGENT_TOOLSDIRECTORY/node/current" && \
   # Also create traditional symlinks
